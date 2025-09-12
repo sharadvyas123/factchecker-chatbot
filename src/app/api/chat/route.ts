@@ -5,7 +5,7 @@ import Message from '@/models/Message';
 import { getUserFromRequest } from '@/lib/auth';
 
 // Handle CORS preflight requests
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {
@@ -16,12 +16,12 @@ export async function OPTIONS(request: NextRequest) {
   });
 }
 
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'https://sharadvyas.app.n8n.cloud/webhook/fact-check';
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    
+
     // Authenticate user
     const user = getUserFromRequest(request);
     if (!user) {
@@ -55,31 +55,85 @@ export async function POST(request: NextRequest) {
         }
       );
 
-      console.log('Raw N8N response:', JSON.stringify(n8nResponse.data, null, 2));
 
       let responseText = "Could not parse response from fact-checking service.";
+      let factCheckData = null;
+
+      // Function to recursively find the content array
+      function findContentArray(obj: unknown): unknown {
+        if (Array.isArray(obj)) {
+          // Check if this array contains content objects
+          if (obj[0] && typeof obj[0] === 'object' && obj[0] !== null) {
+            const item = obj[0] as any;
+            if (item.content && item.content.parts) {
+              return obj;
+            }
+          }
+        }
+
+        if (typeof obj === 'object' && obj !== null) {
+          const objRecord = obj as Record<string, unknown>;
+          for (const key in objRecord) {
+            const result = findContentArray(objRecord[key]);
+            if (result) return result;
+          }
+        }
+
+        return null;
+      }
 
       try {
         const responseData = n8nResponse.data;
-        // The user wants a simpler way to extract the text.
-        // Based on the provided sample, the text is deeply nested.
-        // This is brittle and depends on the exact structure of the response.
-        const key1 = Object.keys(responseData)[0];
-        const key2 = Object.keys(responseData[key1])[0];
-        const contentArray = responseData[key1][key2];
-        responseText = contentArray[0].content.parts[0].text;
-      } catch (e) {
-        console.error("Could not parse n8n response with simplified logic", e);
-        // If parsing fails, just stringify the whole response.
-        responseText = JSON.stringify(n8nResponse.data);
+
+        // Find the content array recursively
+        const contentArray = findContentArray(responseData);
+
+        if (Array.isArray(contentArray) && contentArray[0]) {
+          const firstItem = contentArray[0] as any;
+          if (firstItem.content && firstItem.content.parts && firstItem.content.parts[0]) {
+            const extractedText = firstItem.content.parts[0].text;
+
+            // Try to parse as JSON first
+            try {
+              factCheckData = JSON.parse(extractedText);
+
+              // Handle the structured fact check response
+              if (factCheckData.fact_check_result && factCheckData.explanation) {
+                const isAccurate = factCheckData.fact_check_result === "true";
+                const explanation = factCheckData.explanation;
+
+                responseText = `🔍 Fact-Check Result:\n\n`;
+                responseText += `${isAccurate ? '✅ ACCURATE' : '❌ INACCURATE'}\n\n`;
+                responseText += `📝 Explanation: ${explanation}`;
+              } else {
+                // Handle other JSON structures
+                responseText = extractedText;
+              }
+            } catch (jsonError) {
+              // If it's not JSON, just use the text directly
+              responseText = extractedText.replace(/"/g, ''); // Remove quotes
+            }
+          }
+        } else {
+          // Final fallback - show user-friendly message
+          responseText = "I received a response from the fact-checking service, but couldn't parse it properly. Please try rephrasing your question.";
+        }
+      } catch (parseError) {
+        responseText = "I received a response from the fact-checking service, but couldn't parse it properly. Please try rephrasing your question.";
       }
-      
+
       // Save message to database
       const savedMessage = await Message.create({
         userId: user.userId,
         message: message.trim(),
         response: responseText,
-        isFactChecked: false, // Not fully fact-checked, just displaying text
+        isFactChecked: factCheckData ? true : false,
+        factCheckResult: factCheckData ? {
+          isAccurate: factCheckData.fact_check_result === "true",
+          confidence: factCheckData.fact_check_result === "true" ? 95 : 90,
+          explanation: factCheckData.explanation || "No explanation provided",
+          sources: [],
+        } : undefined,
       });
 
       return NextResponse.json({
@@ -89,21 +143,21 @@ export async function POST(request: NextRequest) {
         timestamp: savedMessage.createdAt,
       });
 
-    } catch (n8nError: any) {
-      console.error('N8N webhook error:', n8nError?.response?.data || n8nError.message || n8nError);
-      
+    } catch (n8nError: unknown) {
+      const error = n8nError as { code?: string; response?: { status?: number }; message?: string };
+
       let errorMessage = 'I\'m currently unable to perform fact-checking due to a service issue.';
-      
-      if (n8nError?.code === 'ECONNREFUSED') {
+
+      if (error?.code === 'ECONNREFUSED') {
         errorMessage += ' The fact-checking service appears to be unavailable.';
-      } else if (n8nError?.response?.status) {
-        errorMessage += ` Service returned error: ${n8nError.response.status}`;
-      } else if (n8nError?.code === 'ENOTFOUND') {
+      } else if (error?.response?.status) {
+        errorMessage += ` Service returned error: ${error.response.status}`;
+      } else if (error?.code === 'ENOTFOUND') {
         errorMessage += ' Could not connect to the fact-checking service.';
       }
-      
+
       errorMessage += '\n\nPlease try again later, or check reliable sources for verification.';
-      
+
       // Fallback response when N8N is unavailable
       const fallbackMessage = await Message.create({
         userId: user.userId,
@@ -122,7 +176,6 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Chat API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

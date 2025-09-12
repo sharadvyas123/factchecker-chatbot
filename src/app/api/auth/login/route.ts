@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!email || !password) {
-      console.log("Failed here no pass no Email ...");
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -24,7 +23,6 @@ export async function POST(request: NextRequest) {
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      console.log("cant find user");
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -34,7 +32,6 @@ export async function POST(request: NextRequest) {
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      console.log("cant match the pass");
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -71,12 +68,10 @@ export async function POST(request: NextRequest) {
       path: '/', // Explicitly set path
     });
     
-    console.log('Login successful, cookie set for user:', user.email);
 
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

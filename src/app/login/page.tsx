@@ -28,27 +28,21 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('Login response:', data);
         // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('User data stored in localStorage');
         
         // Check if cookie was set by testing auth status
         setTimeout(async () => {
           const authCheck = await fetch('/api/auth/status');
           const authData = await authCheck.json();
-          console.log('Auth status after login:', authData);
           
           if (authData.authenticated) {
-            console.log('Authentication verified, navigating to chat');
             router.push('/chat');
           } else {
-            console.log('Authentication failed, cookie not set properly');
             setError('Authentication failed. Please try again.');
           }
         }, 100);
       } else {
-        console.log('Login failed:', data);
         setError(data.error || 'Login failed');
       }
     } catch (error) {
@@ -121,7 +115,7 @@ export default function LoginPage() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link
                 href="/signup"
                 className="font-medium text-indigo-600 hover:text-indigo-500"

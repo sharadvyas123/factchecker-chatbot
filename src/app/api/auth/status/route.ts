@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Auth status check error:', error);
     return NextResponse.json({
       authenticated: false,
       error: 'Failed to check auth status'

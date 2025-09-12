@@ -57,9 +57,20 @@ No test framework is currently set up. For manual testing:
 
 ### Environment Dependencies
 Required environment variables:
-- `MONGODB_URI` - MongoDB connection string (defaults to localhost:27017)
-- `JWT_SECRET` - Secret for JWT token signing
+- `MONGODB_URI` - MongoDB Atlas connection string (configured for production)
+- `JWT_SECRET` - Secret for JWT token signing (minimum 32 characters for production)
 - `N8N_WEBHOOK_URL` - External fact-checking service endpoint
+
+### Deployment Configuration
+**MongoDB Atlas Setup:**
+- Database: `factcheck-chatbot`
+- Connection URI includes retryWrites=true&w=majority parameters for reliability
+- Both `.env.local` and fallback values are configured for the Atlas cluster
+
+**Production Environment:**
+- Copy `.env.production.example` to set up production environment variables
+- Ensure JWT_SECRET is a strong, random 32+ character string in production
+- Build issues with Turbopack - use standard Next.js build if needed: `next build`
 
 ### External Service Integration
 The application integrates with N8N for AI-powered fact-checking:

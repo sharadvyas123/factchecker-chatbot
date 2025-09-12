@@ -1,9 +1,14 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/factcheck-chatbot';
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://jaymahadev1237_db_user:ZsmC2Vh1bR7vt2NR@cluster0.57mdvwc.mongodb.net/factcheck-chatbot?retryWrites=true&w=majority";
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
+
+// Validate MongoDB URI format
+if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
+  throw new Error('Invalid MongoDB URI format. Must start with mongodb:// or mongodb+srv://');
 }
 
 /**
@@ -25,10 +30,17 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      retryWrites: true, // Enable retryable writes for better reliability
+      w: 'majority', // Write concern
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
       return mongoose;
+    }).catch((error) => {
+      throw new Error(`Database connection failed: ${error.message}`);
     });
   }
   cached.conn = await cached.promise;

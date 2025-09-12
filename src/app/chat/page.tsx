@@ -22,7 +22,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{name: string; email: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -50,10 +50,36 @@ export default function ChatPage() {
       const response = await fetch('/api/messages');
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.messages || []);
+        
+        // Transform the messages to show both user and bot messages
+        const transformedMessages: Message[] = [];
+        
+        data.messages.forEach((msg: {id: string; message: string; response: string; isFactChecked: boolean; factCheckResult?: {isAccurate: boolean; confidence: number; explanation: string; sources?: string[]}; timestamp: string}) => {
+          // Add user message
+          transformedMessages.push({
+            id: `${msg.id}-user`,
+            message: msg.message,
+            response: '',
+            isFactChecked: false,
+            timestamp: new Date(msg.timestamp),
+            isUser: true,
+          });
+          
+          // Add bot response
+          transformedMessages.push({
+            id: msg.id,
+            message: msg.message,
+            response: msg.response,
+            isFactChecked: msg.isFactChecked,
+            factCheckResult: msg.factCheckResult,
+            timestamp: new Date(msg.timestamp),
+            isUser: false,
+          });
+        });
+        
+        setMessages(transformedMessages);
       }
     } catch (error) {
-      console.error('Error loading chat history:', error);
     }
   };
 
@@ -63,7 +89,6 @@ export default function ChatPage() {
       localStorage.removeItem('user');
       router.push('/login');
     } catch (error) {
-      console.error('Logout error:', error);
     }
   };
 
@@ -123,7 +148,6 @@ export default function ChatPage() {
         setMessages(prev => [...prev.slice(0, -1), tempUserMessage, errorMessage]);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         message: userMessage,
@@ -164,21 +188,23 @@ export default function ChatPage() {
             <div className="bg-white rounded-lg p-6 shadow-sm max-w-md mx-auto">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to FactCheck Bot!</h3>
               <p className="text-sm text-gray-600">
-                I'm here to help you verify information and check facts. 
-                Send me a statement or claim, and I'll analyze it for accuracy.
+                I&apos;m here to help you verify information and check facts. 
+                Send me a statement or claim, and I&apos;ll analyze it for accuracy.
               </p>
             </div>
           </div>
         ) : (
-          messages.map((msg, index) => (
+                          messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
               {msg.isUser ? (
                 <div className="bg-indigo-600 text-white rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
                   <p className="text-sm">{msg.message}</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-lg px-4 py-3 max-w-xs lg:max-w-md shadow-sm">
-                  <div className="text-sm text-gray-900 whitespace-pre-wrap">{msg.response}</div>
+                <div className="bg-white rounded-lg px-4 py-3 max-w-sm lg:max-w-lg shadow-sm">
+                  <div className="text-sm text-gray-900 whitespace-pre-line break-words">
+                    {msg.response}
+                  </div>
                   
                   {msg.isFactChecked && msg.factCheckResult && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-md border">

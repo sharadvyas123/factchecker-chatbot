@@ -14,10 +14,8 @@ export interface UserPayload {
 // For Edge Runtime (middleware)
 export async function verifyTokenEdge(token: string): Promise<UserPayload | null> {
   try {
-    console.log('Verifying token with jose (Edge Runtime)');
     const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    console.log('Token verified successfully for user:', payload.email);
     return {
       userId: payload.userId as string,
       email: payload.email as string,
@@ -25,7 +23,6 @@ export async function verifyTokenEdge(token: string): Promise<UserPayload | null
       exp: payload.exp,
     };
   } catch (error) {
-    console.log('Token verification failed (Edge):', error);
     return null;
   }
 }
@@ -33,12 +30,9 @@ export async function verifyTokenEdge(token: string): Promise<UserPayload | null
 // For Node.js Runtime (API routes)
 export function verifyToken(token: string): UserPayload | null {
   try {
-    console.log('Verifying token with jsonwebtoken (Node.js Runtime)');
     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-    console.log('Token verified successfully for user:', decoded.email);
     return decoded;
   } catch (error) {
-    console.log('Token verification failed (Node.js):', error);
     return null;
   }
 }

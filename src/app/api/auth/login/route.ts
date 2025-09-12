@@ -6,6 +6,10 @@ import User from '@/models/User';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
@@ -71,7 +75,11 @@ export async function POST(request: NextRequest) {
 
 
     return response;
-    } catch {
+  } catch (error) {
+    // Log error for debugging in production
+    console.error('Login error:', error);
+    
+    // Return generic error message to client
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

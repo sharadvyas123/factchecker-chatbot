@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://jaymahadev1237_db_user:ZsmC2Vh1bR7vt2NR@cluster0.57mdvwc.mongodb.net/factcheck-chatbot?retryWrites=true&w=majority";
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+  throw new Error('MONGODB_URI environment variable is required');
 }
 
 // Validate MongoDB URI format

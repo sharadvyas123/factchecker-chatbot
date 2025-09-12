@@ -55,7 +55,11 @@ export async function POST(request: NextRequest) {
       { message: 'User created successfully', user: userResponse },
       { status: 201 }
     );
-    } catch {
+  } catch (error) {
+    // Log error for debugging in production
+    console.error('Registration error:', error);
+    
+    // Return generic error message to client
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

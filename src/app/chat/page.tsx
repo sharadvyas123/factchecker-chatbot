@@ -79,7 +79,8 @@ export default function ChatPage() {
         
         setMessages(transformedMessages);
       }
-    } catch (error) {
+    } catch {
+      // Error loading chat history
     }
   };
 
@@ -88,7 +89,8 @@ export default function ChatPage() {
       await fetch('/api/auth/logout', { method: 'POST' });
       localStorage.removeItem('user');
       router.push('/login');
-    } catch (error) {
+    } catch {
+      // Logout error
     }
   };
 
@@ -147,7 +149,7 @@ export default function ChatPage() {
         };
         setMessages(prev => [...prev.slice(0, -1), tempUserMessage, errorMessage]);
       }
-    } catch (error) {
+    } catch {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         message: userMessage,

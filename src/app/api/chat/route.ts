@@ -5,7 +5,7 @@ import Message from '@/models/Message';
 import { getUserFromRequest } from '@/lib/auth';
 
 // Handle CORS preflight requests
-export async function OPTIONS(_request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
@@ -16,7 +16,7 @@ export async function OPTIONS(_request: NextRequest) {
   });
 }
 
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'https://sharadvyas.app.n8n.cloud/webhook/fact-check';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
         if (Array.isArray(obj)) {
           // Check if this array contains content objects
           if (obj[0] && typeof obj[0] === 'object' && obj[0] !== null) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const item = obj[0] as any;
             if (item.content && item.content.parts) {
               return obj;
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
         const contentArray = findContentArray(responseData);
 
         if (Array.isArray(contentArray) && contentArray[0]) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const firstItem = contentArray[0] as any;
           if (firstItem.content && firstItem.content.parts && firstItem.content.parts[0]) {
             const extractedText = firstItem.content.parts[0].text;
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
                 // Handle other JSON structures
                 responseText = extractedText;
               }
-            } catch (jsonError) {
+            } catch {
               // If it's not JSON, just use the text directly
               responseText = extractedText.replace(/"/g, ''); // Remove quotes
             }
@@ -118,7 +120,7 @@ export async function POST(request: NextRequest) {
           // Final fallback - show user-friendly message
           responseText = "I received a response from the fact-checking service, but couldn't parse it properly. Please try rephrasing your question.";
         }
-      } catch (parseError) {
+      } catch {
         responseText = "I received a response from the fact-checking service, but couldn't parse it properly. Please try rephrasing your question.";
       }
 
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

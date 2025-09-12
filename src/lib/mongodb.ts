@@ -34,7 +34,7 @@ async function dbConnect() {
       serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
       retryWrites: true, // Enable retryable writes for better reliability
-      w: 'majority', // Write concern
+      w: 'majority' as const, // Write concern
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

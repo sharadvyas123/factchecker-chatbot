@@ -22,7 +22,7 @@ export async function verifyTokenEdge(token: string): Promise<UserPayload | null
       iat: payload.iat,
       exp: payload.exp,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -32,7 +32,7 @@ export function verifyToken(token: string): UserPayload | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

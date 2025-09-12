@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Transform messages for frontend
     const transformedMessages = messages.map(msg => ({
-      id: msg._id.toString(),
+      id: String(msg._id),
       message: msg.message,
       response: msg.response,
       isFactChecked: msg.isFactChecked,
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       messages: transformedMessages,
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -125,6 +125,7 @@ export default function ChatPage() {
       const data = await response.json();
 
       if (response.ok) {
+        console.log("Response Data:", data);
         // Add bot response
         const botMessage: Message = {
           id: data.messageId || (Date.now() + 1).toString(),
